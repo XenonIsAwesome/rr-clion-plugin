@@ -67,4 +67,15 @@ object RrTraces {
 
     /** True if [dir] looks like an rr trace directory (has the `version` file rr writes). */
     fun looksLikeTrace(dir: File): Boolean = dir.isDirectory && File(dir, "version").isFile
+
+    private val MMAP_FILE = Regex("""mmap_(?:copy|hardlink)_(\d+)_(.+)""")
+
+    /**
+     * Fallback when rr's launch line gave no executable: the recorded program is the lowest-numbered
+     * non-library `mmap_copy_N_name` / `mmap_hardlink_N_name` file in the trace directory.
+     */
+    fun guessExecutable(traceDir: File): File? =
+        traceDir.listFiles()?.mapNotNull { f ->
+            MMAP_FILE.matchEntire(f.name)?.takeIf { !it.groupValues[2].contains(".so") }?.let { it.groupValues[1].toInt() to f }
+        }?.minByOrNull { it.first }?.second
 }

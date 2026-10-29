@@ -136,3 +136,13 @@ class CoreTest {
         assertEquals(emptyList<File>(), offenders.toList())
     }
 }
+
+class GuessExecutableTest {
+    @Test fun picksLowestNonLibraryMmap() {
+        val d = File.createTempFile("trace", "").apply { delete(); mkdirs(); deleteOnExit() }
+        listOf("mmap_hardlink_46_libzmq.so.5.2.5", "mmap_hardlink_31_libmantis.so.0.0.0", "mmap_hardlink_4_my-prog", "mmap_copy_9_other", "events")
+            .forEach { File(d, it).writeText("") }
+        assertEquals("mmap_hardlink_4_my-prog", RrTraces.guessExecutable(d)?.name)
+        assertNull(RrTraces.guessExecutable(File(d, "nope")))
+    }
+}

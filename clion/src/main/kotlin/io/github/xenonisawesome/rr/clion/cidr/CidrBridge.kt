@@ -7,6 +7,7 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunProfile
 import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.filters.TextConsoleBuilderFactory
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
@@ -26,9 +27,12 @@ import io.github.xenonisawesome.rr.core.RrBinary
 import io.github.xenonisawesome.rr.core.RrCommands
 import io.github.xenonisawesome.rr.core.RrReplayServer
 import io.github.xenonisawesome.rr.core.RrSettings
+import io.github.xenonisawesome.rr.core.RrTraces
 import java.io.File
 
 class CidrBridge : NativeDebugBridge {
+    private val LOG = Logger.getInstance(CidrBridge::class.java)
+
     override fun isNativeSession(session: XDebugSession): Boolean = session.debugProcess is CidrDebugProcess
 
     override fun runDebuggerCommand(session: XDebugSession, command: String, onDone: (Result<String>) -> Unit) {
@@ -64,19 +68,24 @@ class CidrBridge : NativeDebugBridge {
         project: Project,
         server: RrReplayServer,
         gdbInit: File?,
+        trace: File?,
     ): XDebugProcess {
         val toolchain = CPPToolchains.getInstance().defaultToolchain
             ?: throw ExecutionException("No C/C++ toolchain is configured.")
         val info = server.launchInfo
         val host = info?.host ?: "127.0.0.1"
+        val exe = info?.executable?.takeIf { File(it).isFile }
+            ?: trace?.let { RrTraces.guessExecutable(it) }?.path
+        LOG.info("rr replay: connect=$host:${server.port} launchInfo=$info symbolFile=$exe trace=$trace gdbInit=$gdbInit")
         val params = CidrRemoteDebugParameters(
             "$host:${server.port}",
-            info?.executable.orEmpty(),
+            exe.orEmpty(),
             "/", // equivalent of `set sysroot /`, which rr requires
             emptyList(),
             0,
             // rr's own macros (restart, seek-ticks, hook-run, checkpoints) are only injected when rr starts gdb itself.
-            listOfNotNull(gdbInit?.let { "source ${it.path}" }),
+            // Explicit `file` as a belt-and-braces fallback in case the symbol file parameter is not applied.
+            listOfNotNull(exe?.let { "file $it" }, gdbInit?.let { "source ${it.path}" }),
         )
         return CidrRemoteGDBDebugProcess(
             CLionGDBDriverConfiguration(project, toolchain),

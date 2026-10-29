@@ -67,7 +67,7 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
                         try {
                             val starter = object : XDebugProcessStarter() {
                                 override fun start(session: XDebugSession): XDebugProcess =
-                                    startProcess(session, project, srv, init)
+                                    startProcess(session, project, srv, init, trace)
                             }
                             val result = XDebuggerManager.getInstance(project).newSessionBuilder(starter)
                                 .environment(environment).startSession()
@@ -94,8 +94,9 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
         project: com.intellij.openapi.project.Project,
         server: RrReplayServer,
         gdbInit: File?,
+        trace: File?,
     ): XDebugProcess {
-        val process = NativeDebugBridge.instance.createReplayProcess(session, project, server, gdbInit)
+        val process = NativeDebugBridge.instance.createReplayProcess(session, project, server, gdbInit, trace)
         // The replayed program's output is produced by the rr server process; show it in the console.
         server.addOutputSink { text, isErr ->
             ApplicationManager.getApplication().invokeLater {
@@ -114,13 +115,12 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
         return process
     }
 
-    /** null = rr's default (latest). */
+    /** Empty path = the directory `latest-trace` points to. */
     private fun resolveTrace(path: String, root: String): File? {
         if (path.isEmpty()) {
-            RrTraces.latest(root) ?: throw ExecutionException(
+            return RrTraces.latest(root) ?: throw ExecutionException(
                 "No recordings found in $root. Use \"Record with rr\" first, or pick a trace directory.",
             )
-            return null
         }
         val dir = File(path)
         if (!RrTraces.looksLikeTrace(dir)) throw ExecutionException("'$path' is not an rr trace directory.")

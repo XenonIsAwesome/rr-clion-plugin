@@ -21,7 +21,7 @@ interface NativeDebugBridge {
     fun isCidrRunConfiguration(profile: RunProfile): Boolean
 
     /** Builds a GDB process that connects to [server] (already listening). */
-    fun createReplayProcess(session: XDebugSession, project: Project, server: RrReplayServer, gdbInit: File?): XDebugProcess
+    fun createReplayProcess(session: XDebugSession, project: Project, server: RrReplayServer, gdbInit: File?, trace: File?): XDebugProcess
 
     companion object {
         val instance: NativeDebugBridge by lazy { CidrBridge() }
