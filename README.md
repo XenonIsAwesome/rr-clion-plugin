@@ -4,7 +4,8 @@ Record a run with [rr](https://rr-project.org), replay it in CLion's normal debu
 (reverse-continue, reverse-step, reverse-next, reverse-finish). Linux only; on other systems the plugin loads
 and stays inert.
 
-> **Status: untested in a running CLion.** It compiles against CLion 2026.2.4, passes unit tests,
+> **Status:** Record and Replay were confirmed working in CLion 2026.2.4 by manual test; the remaining items in the
+> manual test script below are not yet reported. It compiles against CLion 2026.2.4, passes unit tests,
 > `buildPlugin` and `verifyPlugin`, and the rr/GDB protocol it relies on was exercised with a plain `gdb`
 > client (see [docs/spike-notes.md](docs/spike-notes.md)). The IDE behaviour needs the manual test below.
 

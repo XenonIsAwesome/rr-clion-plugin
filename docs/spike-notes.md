@@ -47,6 +47,14 @@ the rr server's stdout appears in the Debug console (the plugin forwards it via 
 Open risk: if `sysroot = "/"` is mapped to something other than `set sysroot /`, shared-library symbols may not
 load; fallback is `additionalCommands += "set sysroot /"`.
 
+### Spike 1 follow-up: confirmed in CLion 2026.2.4
+
+Manually confirmed by the user in CLion: Record with rr works, and Replay with rr opens a working GDB session.
+Lesson learned from the debug log: the `CidrRemoteGDBDebugProcess` must be `start()`ed by the caller (CLion's own
+`CidrLauncher.startDebugProcess` does it on the EDT). Without it GDB is spawned but never loads the executable or
+connects, and every breakpoint fails with "No symbol table is loaded". Reverse-button refresh (spike 3) and the
+other REASONED items below were not reported on separately.
+
 ## Spike 2 – Replay Option B (custom GDB wrapper)
 
 Not built, not run. REASONED: CLion validates the GDB binary (version check by running `gdb --version`), and
