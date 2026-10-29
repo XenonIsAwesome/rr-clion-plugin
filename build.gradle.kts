@@ -1,53 +1,49 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.7.1"
+    id("org.jetbrains.kotlin.jvm") version "2.3.21"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 
 group = "io.github.xenonisawesome"
-version = "1.0-SNAPSHOT"
+version = "0.1.0"
+
+val platformType: String by project
+val platformVersion: String by project
+val pluginSinceBuild: String by project
+val pluginUntilBuild: String by project
 
 repositories {
     mavenCentral()
-    intellijPlatform {
-        defaultRepositories()
-    }
+    intellijPlatform { defaultRepositories() }
 }
 
-// Configure IntelliJ Platform Gradle Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     intellijPlatform {
-        create("IC", "2025.1.4.1")
-        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
-
-      // Add necessary plugin dependencies for compilation here, example:
-      // bundledPlugin("com.intellij.java")
+        create(platformType, platformVersion)
+        // The two modules are bundled into the main plugin jar set.
+        pluginComposedModule(implementation(project(":core")))
+        pluginComposedModule(implementation(project(":clion")))
+        pluginVerifier()
+        zipSigner()
     }
 }
 
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "251"
+            sinceBuild = pluginSinceBuild
+            untilBuild = pluginUntilBuild
         }
-
-        changeNotes = """
-            Initial version
-        """.trimIndent()
+        changeNotes = "Initial version: record with rr, replay in the CLion debugger, reverse execution."
+    }
+    pluginVerification {
+        ides {
+            create(platformType, platformVersion)
+        }
     }
 }
 
-tasks {
-    // Set the JVM compatibility versions
-    withType<JavaCompile> {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
-    }
-}
 
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-    }
+    jvmToolchain(21)
 }

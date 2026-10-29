@@ -1,0 +1,18 @@
+<idea-plugin>
+    <!-- CLion-specific part: record executor/runner, replay run configuration and action. -->
+    <extensions defaultExtensionNs="com.intellij">
+        <executor implementation="io.github.xenonisawesome.rr.clion.RrRecordExecutor"/>
+        <programRunner implementation="io.github.xenonisawesome.rr.clion.RrRecordRunner"/>
+        <configurationType implementation="io.github.xenonisawesome.rr.clion.RrReplayConfigurationType"/>
+        <programRunner implementation="io.github.xenonisawesome.rr.clion.RrReplayRunner"/>
+    </extensions>
+    <extensions defaultExtensionNs="cidr">
+        <runConfigurationExtension implementation="io.github.xenonisawesome.rr.clion.cidr.RrRecordExtension"/>
+    </extensions>
+    <actions>
+        <action id="Rr.ReplayWithRr" class="io.github.xenonisawesome.rr.clion.ReplayWithRrAction"
+                text="Replay with rr…" description="Replay an rr recording in the debugger">
+            <add-to-group group-id="RunMenu" anchor="after" relative-to-action="Debug"/>
+        </action>
+    </actions>
+</idea-plugin>
