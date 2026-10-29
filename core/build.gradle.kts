@@ -4,8 +4,8 @@ plugins {
     id("org.jetbrains.intellij.platform.module")
 }
 
-val platformType: String by project
-val platformVersion: String by project
+val platformType = providers.gradleProperty("platformType").get()
+val platformVersion = providers.gradleProperty("platformVersion").get()
 
 repositories {
     mavenCentral()

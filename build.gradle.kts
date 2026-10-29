@@ -7,10 +7,10 @@ plugins {
 group = "io.github.xenonisawesome"
 version = providers.gradleProperty("pluginVersion").getOrElse("0.1.0")
 
-val platformType: String by project
-val platformVersion: String by project
-val pluginSinceBuild: String by project
-val pluginUntilBuild: String by project
+val platformType = providers.gradleProperty("platformType").get()
+val platformVersion = providers.gradleProperty("platformVersion").get()
+val pluginSinceBuild = providers.gradleProperty("pluginSinceBuild").get()
+val pluginUntilBuild = providers.gradleProperty("pluginUntilBuild").get()
 
 repositories {
     mavenCentral()
