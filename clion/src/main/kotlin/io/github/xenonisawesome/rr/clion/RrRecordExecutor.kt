@@ -8,7 +8,7 @@ import javax.swing.Icon
 
 /** The "Record with rr" button next to Run and Debug. Output goes to the regular Run tool window. */
 class RrRecordExecutor : Executor() {
-    private val icon: Icon = IconLoader.getIcon("/icons/rrRecord.svg", RrRecordExecutor::class.java)
+    private val icon: Icon = AllIcons.Debugger.Db_set_breakpoint
 
     override fun getToolWindowId() = ToolWindowId.RUN
     override fun getToolWindowIcon(): Icon = AllIcons.Toolwindows.ToolWindowRun
