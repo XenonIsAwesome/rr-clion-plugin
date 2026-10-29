@@ -87,12 +87,16 @@ class CidrBridge : NativeDebugBridge {
             // Explicit `file` as a belt-and-braces fallback in case the symbol file parameter is not applied.
             listOfNotNull(exe?.let { "file $it" }, gdbInit?.let { "source ${it.path}" }),
         )
-        return CidrRemoteGDBDebugProcess(
+        val process = CidrRemoteGDBDebugProcess(
             CLionGDBDriverConfiguration(project, toolchain),
             params,
             session,
             TextConsoleBuilderFactory.getInstance().createBuilder(project),
         )
+        // CLion's own launchers (CidrLauncher.startDebugProcess) call start() on the EDT right after creating
+        // the process; without it GDB is spawned but never loads the file or connects to the target.
+        process.start()
+        return process
     }
 }
 
