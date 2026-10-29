@@ -114,8 +114,8 @@ class RrReplayServer private constructor(
     companion object {
         /** Starts the server. Never call on the EDT. */
         @Throws(ExecutionException::class)
-        fun start(rr: String, trace: File?, traceRoot: String?, port: Int = Ports.findFree()): RrReplayServer {
-            val args = RrCommands.replayServer(rr, port, trace)
+        fun start(rr: String, trace: File?, traceRoot: String?, pid: Int? = null, port: Int = Ports.findFree()): RrReplayServer {
+            val args = RrCommands.replayServer(rr, port, trace, pid)
             val cmd = GeneralCommandLine(args)
                 .withCharset(StandardCharsets.UTF_8)
                 .withEnvironment(RrCommands.env(traceRoot))

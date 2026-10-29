@@ -78,4 +78,27 @@ object RrTraces {
         traceDir.listFiles()?.mapNotNull { f ->
             MMAP_FILE.matchEntire(f.name)?.takeIf { !it.groupValues[2].contains(".so") }?.let { it.groupValues[1].toInt() to f }
         }?.minByOrNull { it.first }?.second
+
+    /**
+     * Parses `rr ps` output: a `PID PPID EXIT CMD` header, then one process per line (PPID `--` for the root).
+     * Defensive: unparsable lines are skipped.
+     */
+    fun parsePs(output: String): List<RrProcess> =
+        output.lineSequence().mapNotNull { line ->
+            val cols = line.trim().split(Regex("\\s+"), limit = 4)
+            if (cols.size < 4) return@mapNotNull null
+            val pid = cols[0].toIntOrNull() ?: return@mapNotNull null
+            RrProcess(pid, cols[1].toIntOrNull(), cols[2].toIntOrNull(), cols[3])
+        }.toList()
+
+    /** Processes recorded in [traceDir]; empty on failure. Never call on the EDT. */
+    fun listProcesses(rr: String, traceDir: File, traceRoot: String?): List<RrProcess> {
+        val out = RrProcesses.capture(listOf(rr, "ps", traceDir.path), env = RrCommands.env(traceRoot), timeoutMs = 20_000)
+        return if (out.exitCode == 0) parsePs(out.stdout) else emptyList()
+    }
+}
+
+/** One process in a recording, from `rr ps`. [parentPid] is null for the root. */
+data class RrProcess(val pid: Int, val parentPid: Int?, val exitCode: Int?, val command: String) {
+    val isRoot: Boolean get() = parentPid == null
 }

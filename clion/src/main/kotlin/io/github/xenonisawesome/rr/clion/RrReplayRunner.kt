@@ -20,6 +20,7 @@ import com.intellij.xdebugger.XDebugProcessStarter
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebugSessionListener
 import com.intellij.xdebugger.XDebuggerManager
+import io.github.xenonisawesome.rr.core.ProcessPicker
 import io.github.xenonisawesome.rr.core.RrPreflight
 import io.github.xenonisawesome.rr.core.RrReplayServer
 import io.github.xenonisawesome.rr.core.RrSettings
@@ -72,16 +73,50 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
     private fun launch(environment: ExecutionEnvironment, state: RunProfileState, rr: String, tracePath: String): Promise<RunContentDescriptor?> {
         val project = environment.project
         val promise = AsyncPromise<RunContentDescriptor?>()
+        // Step 1 (background): resolve the trace and read which processes it contains.
+        ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Reading rr recording…", true) {
+            override fun run(indicator: ProgressIndicator) {
+                try {
+                    val settings = RrSettings.getInstance()
+                    val root = RrTraceDirs.effectiveRoot(settings.traceDir)
+                    val trace = resolveTrace(tracePath, root)
+                    val processes = RrTraces.listProcesses(rr, trace, settings.traceDir.ifEmpty { null })
+                    ApplicationManager.getApplication().invokeLater {
+                        // A recording of e.g. `ctest` holds the test binaries as child processes: ask which to debug.
+                        if (processes.size > 1) {
+                            ProcessPicker.choose(processes, onCancelled = { promise.setResult(null) }) {
+                                startReplay(environment, state, rr, trace, it.pid, promise)
+                            }
+                        } else {
+                            startReplay(environment, state, rr, trace, null, promise)
+                        }
+                    }
+                } catch (e: Throwable) {
+                    promise.setError(if (e is ExecutionException) e else ExecutionException(e.message ?: e.toString(), e))
+                }
+            }
+        })
+        return promise
+    }
+
+    /** Step 2: start rr's server (optionally at a child process) and open the debug session. */
+    private fun startReplay(
+        environment: ExecutionEnvironment,
+        state: RunProfileState,
+        rr: String,
+        trace: File,
+        pid: Int?,
+        promise: AsyncPromise<RunContentDescriptor?>,
+    ) {
+        val project = environment.project
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Starting rr replay…", true) {
             override fun run(indicator: ProgressIndicator) {
                 var server: RrReplayServer? = null
                 var gdbInit: File? = null
                 try {
                     val settings = RrSettings.getInstance()
-                    val root = RrTraceDirs.effectiveRoot(settings.traceDir)
-                    val trace = resolveTrace(tracePath, root)
-                    server = RrReplayServer.start(rr, trace, settings.traceDir.ifEmpty { null })
-                    server.awaitReady(30_000) { indicator.checkCanceled() }?.let { throw ExecutionException(it) }
+                    server = RrReplayServer.start(rr, trace, settings.traceDir.ifEmpty { null }, pid)
+                    server.awaitReady(60_000) { indicator.checkCanceled() }?.let { throw ExecutionException(it) }
                     gdbInit = RrReplayServer.writeGdbInit(rr)
                     val srv = server
                     val init = gdbInit
@@ -108,7 +143,6 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
                 }
             }
         })
-        return promise
     }
 
     private fun startProcess(
@@ -141,7 +175,7 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
     }
 
     /** Empty path = the directory `latest-trace` points to. */
-    private fun resolveTrace(path: String, root: String): File? {
+    private fun resolveTrace(path: String, root: String): File {
         if (path.isEmpty()) {
             return RrTraces.latest(root) ?: throw ExecutionException(
                 "No recordings found in $root. Use \"Record with rr\" first, or pick a trace directory.",

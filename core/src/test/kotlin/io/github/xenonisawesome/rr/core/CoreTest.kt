@@ -146,3 +146,27 @@ class GuessExecutableTest {
         assertNull(RrTraces.guessExecutable(File(d, "nope")))
     }
 }
+
+class ProcessListTest {
+    @Test fun parsesPsOutput() {
+        val out = "PID\tPPID\tEXIT\tCMD\n" +
+            "303595\t--\t8\t/usr/bin/ctest --extra-verbose -L Scorpion\n" +
+            "303598\t303595\t0\t/build/scorpion-core-gtest --gtest_filter=A.B --gtest_also_run_disabled_tests\n" +
+            "garbage\n"
+        val ps = RrTraces.parsePs(out)
+        assertEquals(2, ps.size)
+        assertTrue(ps[0].isRoot)
+        assertEquals(8, ps[0].exitCode)
+        assertEquals(303598, ps[1].pid)
+        assertEquals(303595, ps[1].parentPid)
+        assertEquals("/build/scorpion-core-gtest --gtest_filter=A.B --gtest_also_run_disabled_tests", ps[1].command)
+        assertTrue(RrTraces.parsePs("").isEmpty())
+    }
+
+    @Test fun replayCommandWithPid() {
+        assertEquals(
+            listOf("rr", "replay", "-s", "9", "-k", "-p", "42", "/t/x-1"),
+            RrCommands.replayServer("rr", 9, File("/t/x-1"), 42),
+        )
+    }
+}
