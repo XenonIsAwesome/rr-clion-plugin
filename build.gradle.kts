@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.github.xenonisawesome"
-version = "0.1.0"
+version = providers.gradleProperty("pluginVersion").getOrElse("0.1.0")
 
 val platformType: String by project
 val platformVersion: String by project

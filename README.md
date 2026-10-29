@@ -34,6 +34,10 @@ toolchain, CLion 2026.2 (build 262).
 ./gradlew runIde                            # sandbox CLion
 ```
 
+CI (GitHub Actions): `ci.yml` runs tests and builds on pull requests and pushes to `master` (plus `verifyPlugin` on `master`);
+pushing a tag like `v0.2.0` runs `release.yml`, which builds with that version and attaches the zip to a GitHub release.
+`./build-plugin.sh [version]` does the same build locally.
+
 Layout: `core/` (platform-only: rr discovery, perf check, trace listing, ports, settings), `clion/` (CIDR
 part; every unofficial CIDR call lives in `clion/.../cidr/CidrBridge.kt`), root (plugin.xml, packaging).
 `core` must not import CIDR; a unit test enforces this.
