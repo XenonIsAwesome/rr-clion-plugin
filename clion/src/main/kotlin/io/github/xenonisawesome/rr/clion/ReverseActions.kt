@@ -1,5 +1,6 @@
 package io.github.xenonisawesome.rr.clion
 
+import com.intellij.icons.AllIcons
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -11,7 +12,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.xdebugger.XDebugSession
 import com.intellij.xdebugger.XDebuggerManager
+import com.intellij.util.IconUtil
 import io.github.xenonisawesome.rr.core.RrPlatform
+import javax.swing.Icon
 
 private fun AnActionEvent.debugSession(): XDebugSession? =
     getData(XDebugSession.DATA_KEY) ?: project?.let { XDebuggerManager.getInstance(it).currentSession }
@@ -47,14 +50,19 @@ abstract class RrDebuggerAction : AnAction(), DumbAware {
 }
 
 /** Sends one fixed GDB reverse-execution command. */
-abstract class RrReverseAction(private val gdbCommand: String) : RrDebuggerAction() {
+abstract class RrReverseAction(private val gdbCommand: String, forwardIcon: Icon) : RrDebuggerAction() {
+    init {
+        // Same icon as the matching forward debugger action, mirrored horizontally.
+        templatePresentation.icon = IconUtil.flip(forwardIcon, true)
+    }
+
     override fun actionPerformed(e: AnActionEvent) = send(e, gdbCommand)
 }
 
-class RrReverseContinueAction : RrReverseAction("reverse-continue")
-class RrReverseStepIntoAction : RrReverseAction("reverse-step")
-class RrReverseStepOverAction : RrReverseAction("reverse-next")
-class RrReverseStepOutAction : RrReverseAction("reverse-finish")
+class RrReverseContinueAction : RrReverseAction("reverse-continue", AllIcons.Actions.Resume)
+class RrReverseStepIntoAction : RrReverseAction("reverse-step", AllIcons.Actions.TraceInto)
+class RrReverseStepOverAction : RrReverseAction("reverse-next", AllIcons.Actions.TraceOver)
+class RrReverseStepOutAction : RrReverseAction("reverse-finish", AllIcons.Actions.StepOut)
 
 /** `when`: reports the current rr event number. */
 class RrShowCurrentEventAction : RrDebuggerAction() {

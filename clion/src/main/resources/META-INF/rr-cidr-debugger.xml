@@ -2,17 +2,13 @@
     <!-- Loaded only when the native (CIDR) debugger is present. Reverse execution controls. -->
     <actions>
         <action id="Rr.ReverseContinue" class="io.github.xenonisawesome.rr.clion.RrReverseContinueAction"
-                text="Reverse Continue (rr)" description="Run backwards until a breakpoint or the start of the recording"
-                icon="/icons/rrReverseContinue.svg"/>
+                text="Reverse Continue (rr)" description="Run backwards until a breakpoint or the start of the recording"/>
         <action id="Rr.ReverseStepInto" class="io.github.xenonisawesome.rr.clion.RrReverseStepIntoAction"
-                text="Reverse Step Into (rr)" description="Step backwards into the previous line"
-                icon="/icons/rrReverseStepInto.svg"/>
+                text="Reverse Step Into (rr)" description="Step backwards into the previous line"/>
         <action id="Rr.ReverseStepOver" class="io.github.xenonisawesome.rr.clion.RrReverseStepOverAction"
-                text="Reverse Step Over (rr)" description="Step backwards over the previous line"
-                icon="/icons/rrReverseStepOver.svg"/>
+                text="Reverse Step Over (rr)" description="Step backwards over the previous line"/>
         <action id="Rr.ReverseStepOut" class="io.github.xenonisawesome.rr.clion.RrReverseStepOutAction"
-                text="Reverse Step Out (rr)" description="Run backwards to the caller of the current function"
-                icon="/icons/rrReverseStepOut.svg"/>
+                text="Reverse Step Out (rr)" description="Run backwards to the caller of the current function"/>
         <action id="Rr.ShowCurrentEvent" class="io.github.xenonisawesome.rr.clion.RrShowCurrentEventAction"
                 text="Show Current rr Event" description="Runs 'when' to show the current event number"/>
         <action id="Rr.GoToEvent" class="io.github.xenonisawesome.rr.clion.RrGoToEventAction"
