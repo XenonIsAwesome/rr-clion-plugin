@@ -67,7 +67,9 @@ Mechanism (API-CHECKED): actions call `CidrDebugProcess.postCommand(SuspendedDeb
 driver.executeInterpreterCommand("reverse-step") })`. The GDB/MI driver sends the command through
 `-interpreter-exec console`, and GDB answers a stepping command with an async `*stopped` record, the same
 record a forward step produces. **REASONED**: CLion's `handleStopped` path therefore refreshes frames,
-variables and the editor position; the existing zerolfx plugin relies on this. **Not verified.** If the UI
+variables and the editor position; the existing zerolfx plugin relies on this. **VERIFIED later in CLion 2026.2.4 (debug log):** `reverse-continue` produced `^running`, then `*stopped` at a
+breakpoint, and CLion re-queried threads, frames and variables. CLion cancels the posted command's coroutine when the
+debuggee starts running; the plugin treats that cancellation as success. ~~Not verified.~~ If the UI
 does not refresh, the fallback is to post `-stack-info-frame`/`frame` as a follow-up through the same
 `postCommand`, or call `CidrDebugProcess.getSession().rebuildViews()`-style APIs (not investigated).
 

@@ -50,7 +50,16 @@ class CidrBridge : NativeDebugBridge {
         process.postCommand(
             CidrDebugProcess.SuspendedDebuggerCommand<String> { driver -> driver.executeInterpreterCommand(command) },
         ).whenComplete { out, err ->
-            onDone(if (err != null) Result.failure(err.cause ?: err) else Result.success(out.orEmpty()))
+            val cause = err?.let { if (it is java.util.concurrent.CompletionException) it.cause ?: it else it }
+            // Resuming commands (reverse-continue, reverse-step, ...) have their coroutine cancelled by CLion as
+            // soon as the debuggee starts running; the command itself succeeded, so that is not an error.
+            onDone(
+                when {
+                    cause == null -> Result.success(out.orEmpty())
+                    cause is java.util.concurrent.CancellationException -> Result.success("")
+                    else -> Result.failure(cause)
+                },
+            )
         }
     }
 
