@@ -6,6 +6,8 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.openapi.ui.popup.PopupStep
 import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import java.io.File
@@ -22,7 +24,15 @@ object TracePicker {
     }
 
     /** [onChosen] gets the trace directory, or null for "latest". Call on the EDT. */
-    fun choose(project: Project?, rrPath: String, anchor: JComponent?, onChosen: (File?) -> Unit) {
+    fun choose(
+        project: Project?,
+        rrPath: String,
+        anchor: JComponent?,
+        onCancelled: () -> Unit = {},
+        onChosen: (File?) -> Unit,
+    ) {
+        var settled = false
+        val chosen: (File?) -> Unit = { settled = true; onChosen(it) }
         val root = RrTraceDirs.effectiveRoot(RrSettings.getInstance().traceDir)
         ApplicationManager.getApplication().executeOnPooledThread {
             val traces = RrTraces.list(rrPath, root)
@@ -43,15 +53,21 @@ object TracePicker {
                     override fun onChosen(selectedValue: Item, finalChoice: Boolean): PopupStep<*>? {
                         ApplicationManager.getApplication().invokeLater {
                             when (selectedValue) {
-                                Item.Latest -> onChosen(null)
-                                is Item.Existing -> onChosen(selectedValue.trace.dir)
-                                Item.Browse -> browse(project, root, onChosen)
+                                Item.Latest -> chosen(null)
+                                is Item.Existing -> chosen(selectedValue.trace.dir)
+                                Item.Browse -> { settled = true; browse(project, root, chosen, onCancelled) }
                             }
                         }
                         return FINAL_CHOICE
                     }
                 }
                 val popup = JBPopupFactory.getInstance().createListPopup(step)
+                popup.addListener(object : JBPopupListener {
+                    override fun onClosed(event: LightweightWindowEvent) {
+                        // Selection handling is deferred with invokeLater, so settle after it had a chance to run.
+                        ApplicationManager.getApplication().invokeLater { if (!settled) { settled = true; onCancelled() } }
+                    }
+                })
                 if (anchor != null) popup.showUnderneathOf(anchor) else popup.showInFocusCenter()
             }
         }
@@ -62,15 +78,18 @@ object TracePicker {
         return "${t.name}  —  $time" + if (t.incomplete) "  (incomplete)" else ""
     }
 
-    private fun browse(project: Project?, root: String, onChosen: (File?) -> Unit) {
+    private fun browse(project: Project?, root: String, onChosen: (File?) -> Unit, onCancelled: () -> Unit) {
         val descriptor = FileChooserDescriptor(false, true, false, false, false, false)
             .withTitle("Select rr Trace Directory")
             .withDescription("A directory created by rr record, e.g. ~/.local/share/rr/a.out-3")
         val start = com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(root)
-        FileChooser.chooseFile(descriptor, project, start)?.let { vf ->
-            val dir = File(vf.path)
-            if (RrTraces.looksLikeTrace(dir)) onChosen(dir)
-            else Messages.showErrorDialog(project, "'${dir.path}' does not look like an rr trace (no 'version' file).", "rr")
+        val vf = FileChooser.chooseFile(descriptor, project, start)
+        if (vf == null) { onCancelled(); return }
+        val dir = File(vf.path)
+        if (RrTraces.looksLikeTrace(dir)) onChosen(dir)
+        else {
+            Messages.showErrorDialog(project, "'${dir.path}' does not look like an rr trace (no 'version' file).", "rr")
+            onCancelled()
         }
     }
 

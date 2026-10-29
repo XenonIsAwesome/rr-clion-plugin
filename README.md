@@ -14,7 +14,8 @@ and stays inert.
 - **Record with rr** – an executor next to Run/Debug. Runs the selected CMake configuration under `rr record`;
   output goes to the Run window. Checks `perf_event_paranoid` first and offers `pkexec sysctl -w
   kernel.perf_event_paranoid=1` (with explicit confirmation), or shows/copies the command if `pkexec` is missing.
-- **Replay with rr…** (Run menu) – pick the latest trace (default), any trace from `rr ls`, or a directory.
+- **Replay with rr** – an executor next to Run/Debug/Record (works on any CMake configuration or an "rr Replay"
+  configuration), plus **Replay with rr…** in the Run menu – pick the latest trace (default), any trace from `rr ls`, or a directory.
   Starts `rr replay -s <port> -k`, then opens a regular GDB debug session connected to it.
 - **Reverse controls** in the Debug window toolbar, plus *Show Current rr Event* (`when`) and *Go to rr Event*
   (`run N`, see limits).
@@ -53,6 +54,8 @@ part; every unofficial CIDR call lives in `clion/.../cidr/CidrBridge.kt`), root 
 
 ## Known limits
 
+- GDB prints `warning: BFD: ... system-supplied DSO at 0x6fffd000 ...` and `Discarding section .replay.text ...` on connect.
+  This is rr's replacement vDSO (a stub page it injects); it is harmless and can be ignored.
 - Local toolchains only. Remote, Docker, SSH and WSL toolchains show a "not supported" message.
 - CLion's remote GDB driver issues `target remote`, not `extended-remote`, so **Go to rr Event** (`run N`) and
   rr's `restart` are rejected by GDB. Reverse execution, breakpoints and `when` work.

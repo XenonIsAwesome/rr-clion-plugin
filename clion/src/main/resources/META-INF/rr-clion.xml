@@ -3,6 +3,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <executor implementation="io.github.xenonisawesome.rr.clion.RrRecordExecutor"/>
         <programRunner implementation="io.github.xenonisawesome.rr.clion.RrRecordRunner"/>
+        <executor implementation="io.github.xenonisawesome.rr.clion.RrReplayExecutor"/>
         <configurationType implementation="io.github.xenonisawesome.rr.clion.RrReplayConfigurationType"/>
         <programRunner implementation="io.github.xenonisawesome.rr.clion.RrReplayRunner"/>
     </extensions>

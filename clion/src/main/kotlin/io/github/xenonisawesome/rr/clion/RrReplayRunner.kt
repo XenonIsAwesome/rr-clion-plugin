@@ -25,6 +25,7 @@ import io.github.xenonisawesome.rr.core.RrReplayServer
 import io.github.xenonisawesome.rr.core.RrSettings
 import io.github.xenonisawesome.rr.core.RrTraceDirs
 import io.github.xenonisawesome.rr.core.RrTraces
+import io.github.xenonisawesome.rr.core.TracePicker
 import org.jetbrains.concurrency.AsyncPromise
 import org.jetbrains.concurrency.Promise
 import org.jetbrains.concurrency.resolvedPromise
@@ -37,18 +38,39 @@ import java.io.File
 class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
     override fun getRunnerId() = "RrReplayRunner"
 
-    override fun canRun(executorId: String, profile: RunProfile): Boolean =
-        executorId == DefaultDebugExecutor.EXECUTOR_ID && profile is RrReplayRunConfiguration
+    override fun canRun(executorId: String, profile: RunProfile): Boolean = when (executorId) {
+        DefaultDebugExecutor.EXECUTOR_ID -> profile is RrReplayRunConfiguration
+        // "Replay with rr" works on the replay configuration and on any CMake/CLion configuration.
+        RrReplayExecutor.ID -> profile is RrReplayRunConfiguration || NativeDebugBridge.instance.isCidrRunConfiguration(profile)
+        else -> false
+    }
 
     override fun execute(environment: ExecutionEnvironment, state: RunProfileState): Promise<RunContentDescriptor?> {
         val project = environment.project
-        val config = environment.runProfile as RrReplayRunConfiguration
+        val config = environment.runProfile as? RrReplayRunConfiguration
         val rr = RrPreflight.resolveRrOrExplain(project) ?: return resolvedPromise(null)
         NativeDebugBridge.instance.toolchainProblem(project)?.let {
             Messages.showErrorDialog(project, it, "rr Replay")
             return resolvedPromise(null)
         }
 
+        // A replay configuration with a trace set (or without "ask on run") goes straight ahead; anything else asks.
+        val ask = config == null || (config.askOnRun && config.tracePath.isEmpty())
+        if (!ask) return launch(environment, rr, config!!.tracePath)
+
+        val promise = AsyncPromise<RunContentDescriptor?>()
+        TracePicker.choose(project, rr, null, onCancelled = { promise.setResult(null) }) { picked ->
+            // Remember a concrete choice in the replay configuration so it is not asked again.
+            if (config != null && picked != null) config.tracePath = picked.path
+            launch(environment, rr, picked?.path.orEmpty())
+                .onSuccess { promise.setResult(it) }
+                .onError { promise.setError(it) }
+        }
+        return promise
+    }
+
+    private fun launch(environment: ExecutionEnvironment, rr: String, tracePath: String): Promise<RunContentDescriptor?> {
+        val project = environment.project
         val promise = AsyncPromise<RunContentDescriptor?>()
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Starting rr replay…", true) {
             override fun run(indicator: ProgressIndicator) {
@@ -57,7 +79,7 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
                 try {
                     val settings = RrSettings.getInstance()
                     val root = RrTraceDirs.effectiveRoot(settings.traceDir)
-                    val trace = resolveTrace(config.tracePath, root)
+                    val trace = resolveTrace(tracePath, root)
                     server = RrReplayServer.start(rr, trace, settings.traceDir.ifEmpty { null })
                     server.awaitReady(30_000) { indicator.checkCanceled() }?.let { throw ExecutionException(it) }
                     gdbInit = RrReplayServer.writeGdbInit(rr)

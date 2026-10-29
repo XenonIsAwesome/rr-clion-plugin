@@ -16,6 +16,7 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.COLUMNS_LARGE
 import com.intellij.ui.dsl.builder.columns
 import com.intellij.ui.dsl.builder.panel
@@ -47,6 +48,13 @@ class RrReplayConfigurationFactory(type: ConfigurationType) : ConfigurationFacto
 }
 
 class RrReplayOptions : RunConfigurationOptions() {
+    private val askOnRunProperty = property(false).provideDelegate(this, "askOnRun")
+
+    /** Ask which trace to replay when running, as long as no trace has been chosen yet. */
+    var askOnRun: Boolean
+        get() = askOnRunProperty.getValue(this)
+        set(value) { askOnRunProperty.setValue(this, value) }
+
     private val tracePathProperty = string("").provideDelegate(this, "tracePath")
 
     /** Trace directory; empty = latest trace. */
@@ -63,6 +71,10 @@ class RrReplayRunConfiguration(project: Project, factory: ConfigurationFactory, 
     var tracePath: String
         get() = options.tracePath
         set(value) { options.tracePath = value.trim() }
+
+    var askOnRun: Boolean
+        get() = options.askOnRun
+        set(value) { options.askOnRun = value }
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = RrReplayEditor(project)
 
@@ -89,8 +101,10 @@ class RrReplayEditor(private val project: Project) : SettingsEditor<RrReplayRunC
         )
     }
 
-    override fun resetEditorFrom(s: RrReplayRunConfiguration) { traceField.text = s.tracePath }
-    override fun applyEditorTo(s: RrReplayRunConfiguration) { s.tracePath = traceField.text }
+    private val askBox = JBCheckBox("Let me pick the trace when running")
+
+    override fun resetEditorFrom(s: RrReplayRunConfiguration) { traceField.text = s.tracePath; askBox.isSelected = s.askOnRun }
+    override fun applyEditorTo(s: RrReplayRunConfiguration) { s.tracePath = traceField.text; s.askOnRun = askBox.isSelected }
 
     override fun createEditor(): JComponent = panel {
         row("Trace directory:") {
@@ -100,6 +114,11 @@ class RrReplayEditor(private val project: Project) : SettingsEditor<RrReplayRunC
                 if (rr != null) TracePicker.choose(project, rr.path, traceField) { traceField.text = it?.path ?: "" }
             }
         }
+        row {
+            cell(askBox).comment(
+                "Opens the trace list when you run, unless a trace is already set above. A trace picked then is " +
+                    "remembered here; clear the field to be asked again. Choosing \"Latest\" is not remembered.",
+            )
+        }
     }
-
 }
