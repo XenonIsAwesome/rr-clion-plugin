@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>io.github.xenonisawesome.rr-clion-plugin</id>
     <name>rr Record and Replay</name>
-    <vendor>xenonisawesome</vendor>
+    <vendor>XenonIsAwesome</vendor>
     <description><![CDATA[
         Record a run with <b>rr</b>, replay it in CLion's normal debugger, and use reverse execution
         (reverse-continue, reverse-step, reverse-next, reverse-finish). Linux only.<br>

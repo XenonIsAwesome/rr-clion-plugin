@@ -25,7 +25,7 @@ and stays inert.
 ## Requirements
 
 Linux, rr ≥ 5.0 with working hardware performance counters, GDB (CLion's bundled or a custom one), a *local*
-toolchain, CLion 2026.2 (build 262).
+toolchain, CLion 2026.1 or 2026.2 (builds 261-262; 2026.1 passes the plugin verifier but is untested at runtime).
 
 ## Build
 

@@ -39,6 +39,8 @@ intellijPlatform {
     pluginVerification {
         ides {
             create(platformType, platformVersion)
+            // Oldest supported release line (since-build 261).
+            create(platformType, "2026.1.5.1")
         }
     }
 }
