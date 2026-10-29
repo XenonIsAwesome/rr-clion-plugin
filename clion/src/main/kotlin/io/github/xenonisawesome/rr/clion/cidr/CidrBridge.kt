@@ -5,12 +5,17 @@ package io.github.xenonisawesome.rr.clion.cidr
 import com.intellij.execution.ExecutionException
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunProfile
+import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.filters.TextConsoleBuilder
+import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.filters.TextConsoleBuilderFactory
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.xdebugger.XDebugProcess
 import com.intellij.xdebugger.XDebugSession
+import com.jetbrains.cidr.execution.CidrConsoleBuilder
+import com.jetbrains.cidr.execution.testing.CidrTestCommandLineState
 import com.jetbrains.cidr.cpp.execution.debugger.backend.CLionGDBDriverConfiguration
 import com.jetbrains.cidr.cpp.toolchains.CPPToolSet
 import com.jetbrains.cidr.cpp.toolchains.CPPToolchains
@@ -29,6 +34,7 @@ import io.github.xenonisawesome.rr.core.RrReplayServer
 import io.github.xenonisawesome.rr.core.RrSettings
 import io.github.xenonisawesome.rr.core.RrTraces
 import java.io.File
+import java.nio.file.Path
 
 class CidrBridge : NativeDebugBridge {
     private val LOG = Logger.getInstance(CidrBridge::class.java)
@@ -63,12 +69,31 @@ class CidrBridge : NativeDebugBridge {
 
     override fun isCidrRunConfiguration(profile: RunProfile): Boolean = profile is OCRunConfiguration<*, *>
 
+    // Same trick as CLionTestLauncher.createConsoleBuilder: a test state builds its own test-results console.
+    private fun consoleBuilderFor(project: Project, state: RunProfileState?): TextConsoleBuilder {
+        if (state is CidrTestCommandLineState<*>) {
+            val dir = Path.of(project.basePath ?: ".")
+            return object : CidrConsoleBuilder(project, CidrToolEnvironment(), dir) {
+                override fun createConsole(): ConsoleView = state.createConsole(this)
+            }
+        }
+        return TextConsoleBuilderFactory.getInstance().createBuilder(project)
+    }
+
+    override fun attachTestOutput(process: XDebugProcess, state: RunProfileState?, server: RrReplayServer): Boolean {
+        if (state !is CidrTestCommandLineState<*>) return false
+        val console = (process as? CidrDebugProcess)?.getConsole() ?: return false
+        console.attachToProcess(server.processHandler)
+        return true
+    }
+
     override fun createReplayProcess(
         session: XDebugSession,
         project: Project,
         server: RrReplayServer,
         gdbInit: File?,
         trace: File?,
+        state: RunProfileState?,
     ): XDebugProcess {
         val toolchain = CPPToolchains.getInstance().defaultToolchain
             ?: throw ExecutionException("No C/C++ toolchain is configured.")
@@ -91,7 +116,7 @@ class CidrBridge : NativeDebugBridge {
             CLionGDBDriverConfiguration(project, toolchain),
             params,
             session,
-            TextConsoleBuilderFactory.getInstance().createBuilder(project),
+            consoleBuilderFor(project, state),
         )
         // CLion's own launchers (CidrLauncher.startDebugProcess) call start() on the EDT right after creating
         // the process; without it GDB is spawned but never loads the file or connects to the target.

@@ -54,6 +54,9 @@ part; every unofficial CIDR call lives in `clion/.../cidr/CidrBridge.kt`), root 
 
 ## Known limits
 
+- For a Google Test (or other CLion test) configuration, "Replay with rr" shows the test-results tree next to the
+  console by feeding the replayed output to it. Untested; the tree fills as the replay runs forward and
+  reverse execution can re-emit output, so counts may look odd after rewinding.
 - GDB prints `warning: BFD: ... system-supplied DSO at 0x6fffd000 ...` and `Discarding section .replay.text ...` on connect.
   This is rr's replacement vDSO (a stub page it injects); it is harmless and can be ignored.
 - Local toolchains only. Remote, Docker, SSH and WSL toolchains show a "not supported" message.

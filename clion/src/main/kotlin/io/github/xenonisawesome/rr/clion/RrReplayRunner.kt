@@ -56,20 +56,20 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
 
         // A replay configuration with a trace set (or without "ask on run") goes straight ahead; anything else asks.
         val ask = config == null || (config.askOnRun && config.tracePath.isEmpty())
-        if (!ask) return launch(environment, rr, config!!.tracePath)
+        if (!ask) return launch(environment, state, rr, config!!.tracePath)
 
         val promise = AsyncPromise<RunContentDescriptor?>()
         TracePicker.choose(project, rr, null, onCancelled = { promise.setResult(null) }) { picked ->
             // Remember a concrete choice in the replay configuration so it is not asked again.
             if (config != null && picked != null) config.tracePath = picked.path
-            launch(environment, rr, picked?.path.orEmpty())
+            launch(environment, state, rr, picked?.path.orEmpty())
                 .onSuccess { promise.setResult(it) }
                 .onError { promise.setError(it) }
         }
         return promise
     }
 
-    private fun launch(environment: ExecutionEnvironment, rr: String, tracePath: String): Promise<RunContentDescriptor?> {
+    private fun launch(environment: ExecutionEnvironment, state: RunProfileState, rr: String, tracePath: String): Promise<RunContentDescriptor?> {
         val project = environment.project
         val promise = AsyncPromise<RunContentDescriptor?>()
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "Starting rr replay…", true) {
@@ -89,7 +89,7 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
                         try {
                             val starter = object : XDebugProcessStarter() {
                                 override fun start(session: XDebugSession): XDebugProcess =
-                                    startProcess(session, project, srv, init, trace)
+                                    startProcess(session, project, srv, init, trace, state)
                             }
                             val result = XDebuggerManager.getInstance(project).newSessionBuilder(starter)
                                 .environment(environment).startSession()
@@ -117,10 +117,13 @@ class RrReplayRunner : AsyncProgramRunner<RunnerSettings>() {
         server: RrReplayServer,
         gdbInit: File?,
         trace: File?,
+        state: RunProfileState,
     ): XDebugProcess {
-        val process = NativeDebugBridge.instance.createReplayProcess(session, project, server, gdbInit, trace)
-        // The replayed program's output is produced by the rr server process; show it in the console.
-        server.addOutputSink { text, isErr ->
+        val bridge = NativeDebugBridge.instance
+        val process = bridge.createReplayProcess(session, project, server, gdbInit, trace, state)
+        // The replayed program's output is produced by the rr server process. For a test configuration it feeds
+        // the test-results tree; otherwise it is printed to the console as plain text.
+        if (!bridge.attachTestOutput(process, state, server)) server.addOutputSink { text, isErr ->
             ApplicationManager.getApplication().invokeLater {
                 session.consoleView?.print(
                     text,
