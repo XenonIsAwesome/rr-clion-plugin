@@ -1,29 +1,21 @@
-<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
     <id>io.github.xenonisawesome.rr-clion-plugin</id>
-
-    <!-- Public plugin name should be written in Title Case.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-name -->
-    <name>Rr-clion-plugin</name>
-
-    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://www.yourcompany.com">YourCompany</vendor>
-
-    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
-         Guidelines: https://plugins.jetbrains.com/docs/marketplace/best-practices-for-listing.html#plugin-description -->
+    <name>rr Record and Replay</name>
+    <vendor>XenonIsAwesome</vendor>
     <description><![CDATA[
-        Enter short description for your plugin here.<br>
-        <em>most HTML tags may be used</em>
+        Record a run with <b>rr</b>, replay it in CLion's normal debugger, and use reverse execution
+        (reverse-continue, reverse-step, reverse-next, reverse-finish). Linux only.<br>
+        Includes a perf_event_paranoid check with a one-click pkexec fix, a trace picker, and settings
+        for the rr binary, trace directory and record flags.
     ]]></description>
 
-    <!-- Product and plugin compatibility requirements.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends optional="true" config-file="rr-cidr-debugger.xml">com.intellij.modules.cidr.debugger</depends>
+    <depends optional="true" config-file="rr-clion.xml">com.intellij.modules.clion</depends>
 
-    <!-- Extension points defined by the plugin.
-         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-
+        <applicationConfigurable parentId="tools" instance="io.github.xenonisawesome.rr.core.RrSettingsConfigurable"
+                                 id="io.github.xenonisawesome.rr.settings" displayName="rr (Record &amp; Replay)"/>
+        <notificationGroup id="rr" displayType="BALLOON" displayName="rr"/>
     </extensions>
 </idea-plugin>

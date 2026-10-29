@@ -41,3 +41,10 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+.intellijPlatform/
+
+# IDE-generated project files
+.idea/.name
+.idea/gradle.xml
+.idea/kotlinc.xml
+.idea/vcs.xml

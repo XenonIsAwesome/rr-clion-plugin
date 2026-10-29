@@ -1,53 +1,51 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij.platform") version "2.7.1"
+    id("org.jetbrains.kotlin.jvm") version "2.3.21"
+    id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 
 group = "io.github.xenonisawesome"
-version = "1.0-SNAPSHOT"
+version = providers.gradleProperty("pluginVersion").getOrElse("0.1.0")
+
+val platformType = providers.gradleProperty("platformType").get()
+val platformVersion = providers.gradleProperty("platformVersion").get()
+val pluginSinceBuild = providers.gradleProperty("pluginSinceBuild").get()
+val pluginUntilBuild = providers.gradleProperty("pluginUntilBuild").get()
 
 repositories {
     mavenCentral()
-    intellijPlatform {
-        defaultRepositories()
-    }
+    intellijPlatform { defaultRepositories() }
 }
 
-// Configure IntelliJ Platform Gradle Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     intellijPlatform {
-        create("IC", "2025.1.4.1")
-        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
-
-      // Add necessary plugin dependencies for compilation here, example:
-      // bundledPlugin("com.intellij.java")
+        create(platformType, platformVersion)
+        // The two modules are bundled into the main plugin jar set.
+        pluginComposedModule(implementation(project(":core")))
+        pluginComposedModule(implementation(project(":clion")))
+        pluginVerifier()
+        zipSigner()
     }
 }
 
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "251"
+            sinceBuild = pluginSinceBuild
+            untilBuild = pluginUntilBuild
         }
-
-        changeNotes = """
-            Initial version
-        """.trimIndent()
+        changeNotes = "Initial version: record with rr, replay in the CLion debugger, reverse execution."
+    }
+    pluginVerification {
+        ides {
+            create(platformType, platformVersion)
+            // Oldest supported release line (since-build 261).
+            create(platformType, "2026.1.5.1")
+        }
     }
 }
 
-tasks {
-    // Set the JVM compatibility versions
-    withType<JavaCompile> {
-        sourceCompatibility = "21"
-        targetCompatibility = "21"
-    }
-}
 
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
-    }
+    jvmToolchain(21)
 }
