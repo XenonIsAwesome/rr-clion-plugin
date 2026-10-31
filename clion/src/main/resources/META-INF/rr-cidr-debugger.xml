@@ -10,23 +10,26 @@
         <action id="Rr.ReverseStepOut" class="io.github.xenonisawesome.rr.clion.RrReverseStepOutAction"
                 text="Reverse Step Out (rr)" description="Run backwards to the caller of the current function"/>
         <action id="Rr.ShowCurrentEvent" class="io.github.xenonisawesome.rr.clion.RrShowCurrentEventAction"
-                text="Show Current rr Event" description="Runs 'when' to show the current event number"/>
+                text="Show Current rr Event" description="Runs 'when' to show the current event number"
+                icon="AllIcons.General.Information">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="Rr.GoToEvent" class="io.github.xenonisawesome.rr.clion.RrGoToEventAction"
-                text="Go to rr Event…" description="Runs 'run N' to jump to an event (needs extended-remote)"/>
+                text="Go to rr Event…" description="Runs 'run N' to jump to an event (needs extended-remote)"
+                icon="AllIcons.Actions.Forward">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
 
         <group id="Rr.DebuggerToolbar">
             <reference ref="Rr.ReverseContinue"/>
             <reference ref="Rr.ReverseStepInto"/>
             <reference ref="Rr.ReverseStepOver"/>
             <reference ref="Rr.ReverseStepOut"/>
-            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar" anchor="last"/>
-            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar3" anchor="last"/>
-            <add-to-group group-id="XDebugger.ToolWindow.LeftToolbar" anchor="last"/>
-        </group>
-        <group id="Rr.DebuggerMore" popup="true" text="rr Events">
             <reference ref="Rr.ShowCurrentEvent"/>
             <reference ref="Rr.GoToEvent"/>
             <add-to-group group-id="XDebugger.ToolWindow.TopToolbar" anchor="last"/>
+            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar3" anchor="last"/>
+            <add-to-group group-id="XDebugger.ToolWindow.LeftToolbar" anchor="last"/>
         </group>
     </actions>
 </idea-plugin>
