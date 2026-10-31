@@ -1,3 +1,5 @@
+<img src="src/main/resources/META-INF/pluginIcon.svg" alt="rr plugin logo" width="96" align="right">
+
 # rr Record and Replay for CLion
 
 Record a run with [rr](https://rr-project.org), replay it in CLion's normal debugger, and move backwards
