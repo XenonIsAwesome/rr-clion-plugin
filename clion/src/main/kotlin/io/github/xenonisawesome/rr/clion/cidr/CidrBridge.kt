@@ -29,6 +29,7 @@ import com.jetbrains.cidr.lang.toolchains.CidrToolEnvironment
 import com.jetbrains.cidr.lang.workspace.OCRunConfiguration
 import io.github.xenonisawesome.rr.clion.NativeDebugBridge
 import io.github.xenonisawesome.rr.clion.RrRecordRunner
+import io.github.xenonisawesome.rr.core.AnsiStripper
 import io.github.xenonisawesome.rr.core.RrBinary
 import io.github.xenonisawesome.rr.core.RrCommands
 import io.github.xenonisawesome.rr.core.RrReplayServer
@@ -96,8 +97,14 @@ class CidrBridge : NativeDebugBridge {
         // CidrDebugProcess.createConsole() already attaches the test console to the debug process's own handler.
         // Attaching it to the rr server's handler as well builds a second test tree whose tests never run, so
         // the server's output is forwarded into that one handler instead.
+        // Colour codes (the trace may come from CI) would stop CLion's gtest parser from recognising [ RUN ]/[ OK ] lines.
+        val out = AnsiStripper()
+        val err = AnsiStripper()
         server.addOutputSink { text, isErr ->
-            handler.notifyTextAvailable(text, if (isErr) ProcessOutputTypes.STDERR else ProcessOutputTypes.STDOUT)
+            val clean = (if (isErr) err else out).strip(text)
+            if (clean.isNotEmpty()) {
+                handler.notifyTextAvailable(clean, if (isErr) ProcessOutputTypes.STDERR else ProcessOutputTypes.STDOUT)
+            }
         }
         return true
     }
