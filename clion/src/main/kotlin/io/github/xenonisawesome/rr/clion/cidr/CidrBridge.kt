@@ -7,6 +7,7 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.configurations.RunProfile
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.filters.TextConsoleBuilder
+import com.intellij.execution.process.ProcessOutputTypes
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.configurations.RunnerSettings
 import com.intellij.execution.filters.TextConsoleBuilderFactory
@@ -91,8 +92,13 @@ class CidrBridge : NativeDebugBridge {
 
     override fun attachTestOutput(process: XDebugProcess, state: RunProfileState?, server: RrReplayServer): Boolean {
         if (state !is CidrTestCommandLineState<*>) return false
-        val console = (process as? CidrDebugProcess)?.getConsole() ?: return false
-        console.attachToProcess(server.processHandler)
+        val handler = (process as? CidrDebugProcess)?.processHandler ?: return false
+        // CidrDebugProcess.createConsole() already attaches the test console to the debug process's own handler.
+        // Attaching it to the rr server's handler as well builds a second test tree whose tests never run, so
+        // the server's output is forwarded into that one handler instead.
+        server.addOutputSink { text, isErr ->
+            handler.notifyTextAvailable(text, if (isErr) ProcessOutputTypes.STDERR else ProcessOutputTypes.STDOUT)
+        }
         return true
     }
 

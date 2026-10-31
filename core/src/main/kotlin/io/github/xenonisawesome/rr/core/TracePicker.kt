@@ -1,5 +1,6 @@
 package io.github.xenonisawesome.rr.core
 
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
@@ -21,6 +22,7 @@ object TracePicker {
         data object Latest : Item
         data class Existing(val trace: RrTrace) : Item
         data object Browse : Item
+        data object OpenFolder : Item
     }
 
     /** [onChosen] gets the trace directory, or null for "latest". Call on the EDT. */
@@ -42,11 +44,13 @@ object TracePicker {
                     add(Item.Latest)
                     traces.getOrDefault(emptyList()).forEach { add(Item.Existing(it)) }
                     add(Item.Browse)
+                    add(Item.OpenFolder)
                 }
                 val step = object : BaseListPopupStep<Item>("Replay Which Recording?", items) {
                     override fun getTextFor(value: Item): String = when (value) {
                         Item.Latest -> "Latest recording (default)"
                         Item.Browse -> "Choose a trace directory…"
+                        Item.OpenFolder -> "Open trace directory in file explorer…"
                         is Item.Existing -> describe(value.trace)
                     }
 
@@ -56,6 +60,12 @@ object TracePicker {
                                 Item.Latest -> chosen(null)
                                 is Item.Existing -> chosen(selectedValue.trace.dir)
                                 Item.Browse -> { settled = true; browse(project, root, chosen, onCancelled) }
+                                Item.OpenFolder -> {
+                                    // Opening the folder is not a choice: show the picker again afterwards.
+                                    settled = true
+                                    openInFileExplorer(project, root)
+                                    choose(project, rrPath, anchor, onCancelled, onChosen)
+                                }
                             }
                         }
                         return FINAL_CHOICE
@@ -71,6 +81,12 @@ object TracePicker {
                 if (anchor != null) popup.showUnderneathOf(anchor) else popup.showInFocusCenter()
             }
         }
+    }
+
+    private fun openInFileExplorer(project: Project?, root: String) {
+        val dir = File(root)
+        if (dir.isDirectory) RevealFileAction.openDirectory(dir)
+        else Messages.showErrorDialog(project, "The trace directory '$root' does not exist yet. Record something with rr first.", "rr")
     }
 
     private fun describe(t: RrTrace): String {

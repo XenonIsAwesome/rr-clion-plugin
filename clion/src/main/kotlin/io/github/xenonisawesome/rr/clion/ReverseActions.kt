@@ -78,9 +78,10 @@ class RrGoToEventAction : RrDebuggerAction() {
         val event = Messages.showInputDialog(
             e.project, "Event number to jump to:", "Go to rr Event", null, "",
             object : com.intellij.openapi.ui.InputValidatorEx {
-                override fun checkInput(inputString: String?) = inputString?.trim()?.toLongOrNull() != null
+                override fun checkInput(inputString: String?) = (inputString?.trim()?.toLongOrNull() ?: -1) >= 0
                 override fun canClose(inputString: String?) = checkInput(inputString)
-                override fun getErrorText(inputString: String?) = "Enter a non-negative whole number"
+                override fun getErrorText(inputString: String?) =
+                    if (inputString.isNullOrBlank() || checkInput(inputString)) null else "Enter a non-negative whole number"
             },
         )?.trim() ?: return
         send(e, "run $event")
