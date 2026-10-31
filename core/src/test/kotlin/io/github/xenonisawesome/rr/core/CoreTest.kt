@@ -170,3 +170,59 @@ class ProcessListTest {
         )
     }
 }
+
+class TraceDownloaderTest {
+    private fun tmp() = java.nio.file.Files.createTempDirectory("rrdl").toFile()
+
+    @Test fun urlValidationAndNames() {
+        assertNull(TraceDownloader.validateUrl("https://h/x/core-gtest.tar.gz"))
+        assertNotNull(TraceDownloader.validateUrl("ftp://h/x"))
+        assertNotNull(TraceDownloader.validateUrl("not a url"))
+        assertEquals("core-gtest", TraceDownloader.baseName("https://h/a/core-gtest.tar.gz?token=1"))
+        assertEquals("downloaded-trace", TraceDownloader.baseName("https://h/"))
+    }
+
+    @Test fun extractsTarGzAndFindsTrace() {
+        val src = tmp(); File(src, "t-0").mkdirs(); File(src, "t-0/version").writeText("1")
+        val archive = File(tmp(), "a.tar.gz")
+        ProcessBuilder("tar", "-C", src.path, "-czf", archive.path, ".").start().waitFor()
+        assertEquals(TraceDownloader.Format.TAR, TraceDownloader.detectFormat(archive))
+        val dest = tmp()
+        TraceDownloader.extract(archive, TraceDownloader.Format.TAR, dest)
+        assertEquals("t-0", TraceDownloader.findTrace(dest)?.name)
+    }
+
+    @Test fun extractsZip() {
+        val archive = File(tmp(), "a.zip")
+        java.util.zip.ZipOutputStream(archive.outputStream()).use {
+            it.putNextEntry(java.util.zip.ZipEntry("x/version")); it.write(1); it.closeEntry()
+        }
+        assertEquals(TraceDownloader.Format.ZIP, TraceDownloader.detectFormat(archive))
+        val dest = tmp()
+        TraceDownloader.extract(archive, TraceDownloader.Format.ZIP, dest)
+        assertEquals("x", TraceDownloader.findTrace(dest)?.name)
+    }
+}
+
+class LocalArchiveTest {
+    @Test fun extractLocalUnpacksIntoRoot() {
+        val src = java.nio.file.Files.createTempDirectory("rrsrc").toFile()
+        File(src, "t-0").mkdirs(); File(src, "t-0/version").writeText("1")
+        val archive = File(java.nio.file.Files.createTempDirectory("rrar").toFile(), "core-gtest.tar.gz")
+        ProcessBuilder("tar", "-C", src.path, "-czf", archive.path, ".").start().waitFor()
+        val root = java.nio.file.Files.createTempDirectory("rrroot").toFile()
+        val dir = TraceDownloader.extractLocal(archive, root).getOrThrow()
+        assertEquals("t-0", dir.name)
+        assertEquals("core-gtest", dir.parentFile.name)
+        assertTrue(archive.exists())
+    }
+}
+
+class AnsiStripperTest {
+    @Test fun stripsColoursAcrossChunks() {
+        val s = AnsiStripper()
+        assertEquals("[ RUN      ] A.B\n", s.strip("\u001B[0;32m[ RUN      ] \u001B[mA.B\n"))
+        assertEquals("ab", s.strip("a\u001B[0;3") + s.strip("2mb"))
+        assertEquals("plain", AnsiStripper().strip("plain"))
+    }
+}
